@@ -148,10 +148,10 @@ func (b *BatchServer[Job]) run(ctx context.Context) {
 // Accept accepts a new Job for processing. It will be queued in the batch
 // until the batch can be processed by the Handler.
 func (b *BatchServer[Job]) Accept(job Job) *Stub {
+	id := id(atomic.AddInt64(&b.count, 1))
 	for {
 		select {
-		case <-b.fifo:
-			id := atomic.AddInt64(&b.count, 1)
+		case b.fifo <- iJob[Job]{ID: id, Job: job}:
 			return b.newTicket(id)
 		default:
 			select {
@@ -163,7 +163,7 @@ func (b *BatchServer[Job]) Accept(job Job) *Stub {
 	}
 }
 
-func (b *BatchServer[Job]) newTicket(id int64) *Stub {
+func (b *BatchServer[Job]) newTicket(id id) *Stub {
 	ticket := &Stub{
 		err: make(chan error, 1),
 	}
