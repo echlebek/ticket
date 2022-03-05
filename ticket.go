@@ -27,7 +27,7 @@ func (t *Stub) Wait(ctx context.Context) error {
 
 type id int64
 
-type iJob[Job any] struct {
+type acceptedJob[Job any] struct {
 	ID  id
 	Job Job
 }
@@ -47,7 +47,7 @@ type BatchServer[Job any] struct {
 	count      int64
 	bufferSize int
 	timeout    time.Duration
-	fifo       chan iJob[Job]
+	fifo       chan acceptedJob[Job]
 	sig        chan struct{}
 	tickets    sync.Map // key type id, value type *Stub
 	handler    Handler[Job]
@@ -64,7 +64,7 @@ func NewBatchServer[Job any](ctx context.Context, size int, timeout time.Duratio
 	server := &BatchServer[Job]{
 		bufferSize: size,
 		timeout:    timeout,
-		fifo:       make(chan iJob[Job], size),
+		fifo:       make(chan acceptedJob[Job], size),
 		sig:        make(chan struct{}, 1),
 		handler:    handler,
 		cond:       sync.NewCond(new(sync.Mutex)),
@@ -93,12 +93,8 @@ func (b *BatchServer[Job]) watchdog(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			if b.timeSinceLastSubmit() < b.timeout {
-				continue
-			}
-			select {
-			case b.sig <- struct{}{}:
-			default:
+			if b.timeSinceLastSubmit() >= b.timeout {
+				b.trySignal()
 			}
 		case <-ctx.Done():
 			return
@@ -123,7 +119,7 @@ func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
 	if len(jobs) == 0 {
 		return
 	}
-	b.lastSubmit = time.Now()
+	b.resetLastSubmit()
 	err := b.handler.Handle(ctx, jobs)
 	for _, key := range keys {
 		t, ok := b.tickets.LoadAndDelete(key)
@@ -151,13 +147,10 @@ func (b *BatchServer[Job]) Accept(job Job) *Stub {
 	id := id(atomic.AddInt64(&b.count, 1))
 	for {
 		select {
-		case b.fifo <- iJob[Job]{ID: id, Job: job}:
+		case b.fifo <- acceptedJob[Job]{ID: id, Job: job}:
 			return b.newTicket(id)
 		default:
-			select {
-			case b.sig <- struct{}{}:
-			default:
-			}
+			b.trySignal()
 			b.wait()
 		}
 	}
@@ -175,4 +168,11 @@ func (b *BatchServer[Job]) wait() {
 	b.cond.L.Lock()
 	defer b.cond.L.Unlock()
 	b.cond.Wait()
+}
+
+func (b *BatchServer[Job]) trySignal() {
+	select {
+	case b.sig <- struct{}{}:
+	default:
+	}
 }

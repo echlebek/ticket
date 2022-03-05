@@ -9,10 +9,21 @@ import (
 	"github.com/echlebek/ticket"
 )
 
+type BenchJobHandler[J Job] struct {
+	Run bool
+}
+
+func (h *BenchJobHandler[J]) Handle(ctx context.Context, jobs []J) error {
+	if len(jobs) > 0 {
+		h.Run = true
+	}
+	return nil
+}
+
 func BenchmarkBatchServer(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	handler := JobHandler[Job]{}
+	handler := BenchJobHandler[Job]{}
 	server := ticket.NewBatchServer[Job](ctx, 100, time.Millisecond, &handler)
 	stubs := make([]*ticket.Stub, 100)
 	var wg sync.WaitGroup
