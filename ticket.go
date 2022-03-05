@@ -126,13 +126,16 @@ func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
 	err := b.handler.Handle(ctx, jobs)
 	b.tixMu.Lock()
 	defer b.tixMu.Unlock()
-	for _, key := range keys {
+	for i, key := range keys {
 		t, ok := b.tickets[key]
 		if ok {
 			delete(b.tickets, key)
 			t.err = err
 			t.wg.Done()
 		}
+		var zeroJob Job
+		// avoid leaking jobs since the slice is reused
+		jobs[i] = zeroJob
 	}
 }
 
