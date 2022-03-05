@@ -49,7 +49,8 @@ type BatchServer[Job any] struct {
 	timeout    time.Duration
 	fifo       chan acceptedJob[Job]
 	sig        chan struct{}
-	tickets    sync.Map // key type id, value type *Stub
+	tickets    map[id]*Stub
+	tixMu      sync.Mutex
 	handler    Handler[Job]
 	cond       *sync.Cond
 	lastSubmit time.Time
@@ -69,6 +70,7 @@ func NewBatchServer[Job any](ctx context.Context, size int, timeout time.Duratio
 		handler:    handler,
 		cond:       sync.NewCond(new(sync.Mutex)),
 		lastSubmit: time.Now(),
+		tickets:    make(map[id]*Stub),
 	}
 	go server.run(ctx)
 	go server.watchdog(ctx)
@@ -121,11 +123,13 @@ func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
 	}
 	b.resetLastSubmit()
 	err := b.handler.Handle(ctx, jobs)
+	b.tixMu.Lock()
+	defer b.tixMu.Unlock()
 	for _, key := range keys {
-		t, ok := b.tickets.LoadAndDelete(key)
+		t, ok := b.tickets[key]
 		if ok {
-			ticket := t.(*Stub)
-			ticket.err <- err
+			delete(b.tickets, key)
+			t.err <- err
 		}
 	}
 }
@@ -160,7 +164,10 @@ func (b *BatchServer[Job]) newTicket(id id) *Stub {
 	ticket := &Stub{
 		err: make(chan error, 1),
 	}
-	b.tickets.Store(id, ticket)
+	b.tixMu.Lock()
+	defer b.tixMu.Unlock()
+	b.tickets[id] = ticket
+	// b.tickets.Store(id, ticket)
 	return ticket
 }
 
