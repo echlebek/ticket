@@ -47,7 +47,7 @@ func TestSmoke(t *testing.T) {
 	server := ticket.NewBatchServer[Job](ctx, 100, time.Millisecond, &handler)
 
 	stub := server.Accept(Job{})
-	if err := stub.Wait(context.Background()); err != nil {
+	if err := stub.Wait(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,7 +68,7 @@ func TestCancel(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	cancel()
 
-	if err := stub.Wait(context.Background()); err != nil {
+	if err := stub.Wait(); err != nil {
 		t.Fatal(err)
 	}
 

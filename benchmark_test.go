@@ -36,7 +36,7 @@ func BenchmarkBatchServer(b *testing.B) {
 			go func() {
 				wg.Add(1)
 				for i := range cstubs {
-					_ = cstubs[i].Wait(ctx)
+					_ = cstubs[i].Wait()
 				}
 				wg.Done()
 			}()

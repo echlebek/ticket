@@ -10,19 +10,16 @@ import (
 // Stub represents a ticket for a Job. When a Job is Accepted, a Stub will be
 // returned. The caller can wait for the Job to complete by calling Wait().
 type Stub struct {
-	err chan error
+	err error
+	wg sync.WaitGroup
 }
 
 // Wait waits for the Job associated with the ticket to be completed.
-// The Job's error will be returned, or the context's error, if the context
-// is cancelled before the job completes.
-func (t *Stub) Wait(ctx context.Context) error {
-	select {
-	case err := <-t.err:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+// The Job's error will be returned, or the context's error, if the server
+// context is cancelled before the job completes.
+func (t *Stub) Wait() error {
+	t.wg.Wait()
+	return t.err
 }
 
 type id int64
@@ -129,7 +126,8 @@ func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
 		t, ok := b.tickets[key]
 		if ok {
 			delete(b.tickets, key)
-			t.err <- err
+			t.err = err
+			t.wg.Done()
 		}
 	}
 }
@@ -161,13 +159,14 @@ func (b *BatchServer[Job]) Accept(job Job) *Stub {
 }
 
 func (b *BatchServer[Job]) newTicket(id id) *Stub {
-	ticket := &Stub{
-		err: make(chan error, 1),
-	}
+	ticket := &Stub{}
+	ticket.wg.Add(1)
+
 	b.tixMu.Lock()
 	defer b.tixMu.Unlock()
+
 	b.tickets[id] = ticket
-	// b.tickets.Store(id, ticket)
+
 	return ticket
 }
 

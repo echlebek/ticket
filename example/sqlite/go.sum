@@ -2,6 +2,8 @@ github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/echlebek/ticket v0.0.0-20220304232326-678d68b44ecb h1:dEYaWJzFn4MbkwjJ81qzqeIeSlFPcpxWJ7mLKwx2gds=
 github.com/echlebek/ticket v0.0.0-20220304232326-678d68b44ecb/go.mod h1:swHCaZi0Dkm4bNSctQL4RPLelnN7T7dWrKJ2/V4QA1c=
+github.com/echlebek/ticket v0.0.0-20220305193439-8ede895df56a h1:D8qan6areMNEh6pGA1w9+eawGlmfArk2Q98oBM1T6Rw=
+github.com/echlebek/ticket v0.0.0-20220305193439-8ede895df56a/go.mod h1:swHCaZi0Dkm4bNSctQL4RPLelnN7T7dWrKJ2/V4QA1c=
 github.com/google/go-cmp v0.5.3 h1:x95R7cp+rSeeqAMI2knLtQ0DKlaBhv2NrtrOvafPHRo=
 github.com/google/go-cmp v0.5.3/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
