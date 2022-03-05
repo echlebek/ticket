@@ -69,7 +69,7 @@ func doTicketBench(size int, b *testing.B) {
 	b.RunParallel(func (pb *testing.PB) {
 		for pb.Next() {
 			borks := atomic.AddInt64(&borks, 1)
-			_ = server.Accept(QueryValues{Name: "hello", Bork: int(borks)}).Wait(context.Background())
+			_ = server.Accept(QueryValues{Name: "hello", Bork: int(borks)}).Wait()
 		}
 	})
 }
