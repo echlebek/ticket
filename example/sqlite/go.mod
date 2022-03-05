@@ -2,6 +2,8 @@ module github.com/echlebek/ticket/example/sqlite
 
 go 1.18
 
+replace github.com/echlebek/ticket => ../../
+
 require (
 	github.com/echlebek/ticket v0.0.0-20220305193439-8ede895df56a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c

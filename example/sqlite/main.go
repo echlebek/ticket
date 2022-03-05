@@ -48,12 +48,6 @@ var borksOutOf10 = map[string]int {
 	"kiki": 1000000,
 }
 
-func egFunc(f func (ctx context.Context) error) func() error {
-	return func() error {
-		return f(context.Background())
-	}
-}
-
 func main() {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -76,7 +70,7 @@ func main() {
 	var eg errgroup.Group
 	for i := 0; i < 1000; i++ {
 		for name, borks := range borksOutOf10 {
-			eg.Go(egFunc(server.Accept(QueryValues{Name: name, Bork: borks}).Wait))
+			eg.Go(server.Accept(QueryValues{Name: name, Bork: borks}).Wait)
 		}
 	}
 	if err := eg.Wait(); err != nil {
