@@ -52,6 +52,8 @@ type BatchServer[Job any] struct {
 	cond       *sync.Cond
 	lastSubmit time.Time
 	lsMu       sync.Mutex
+	jobs       []Job
+	keys       []id
 }
 
 // NewBatchServer creates a new BatchServer with a maximum buffer size
@@ -68,6 +70,8 @@ func NewBatchServer[Job any](ctx context.Context, size int, timeout time.Duratio
 		cond:       sync.NewCond(new(sync.Mutex)),
 		lastSubmit: time.Now(),
 		tickets:    make(map[id]*Stub),
+		jobs:       make([]Job, 0, size),
+		keys:       make([]id, 0, size),
 	}
 	go server.run(ctx)
 	go server.watchdog(ctx)
@@ -102,8 +106,8 @@ func (b *BatchServer[Job]) watchdog(ctx context.Context) {
 }
 
 func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
-	jobs := make([]Job, 0, b.bufferSize)
-	keys := make([]id, 0, b.bufferSize)
+	jobs := b.jobs
+	keys := b.keys
 	iter := true
 	for iter {
 		select {
