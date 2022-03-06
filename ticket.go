@@ -52,8 +52,7 @@ type BatchServer[Job any] struct {
 	cond       *sync.Cond
 	lastSubmit time.Time
 	lsMu       sync.Mutex
-	jobs       []Job
-	keys       []id
+	keys       []id // avoid allocations on calls to doSubmit
 }
 
 // NewBatchServer creates a new BatchServer with a maximum buffer size
@@ -70,7 +69,6 @@ func NewBatchServer[Job any](ctx context.Context, size int, timeout time.Duratio
 		cond:       sync.NewCond(new(sync.Mutex)),
 		lastSubmit: time.Now(),
 		tickets:    make(map[id]*Stub),
-		jobs:       make([]Job, 0, size),
 		keys:       make([]id, 0, size),
 	}
 	go server.run(ctx)
@@ -106,7 +104,8 @@ func (b *BatchServer[Job]) watchdog(ctx context.Context) {
 }
 
 func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
-	jobs := b.jobs
+	// jobs cannot be modified after being sent to handler.Handle
+	jobs := make([]Job, 0, b.bufferSize)
 	keys := b.keys
 	iter := true
 	for iter {
@@ -126,16 +125,13 @@ func (b *BatchServer[Job]) doSubmit(ctx context.Context) {
 	err := b.handler.Handle(ctx, jobs)
 	b.tixMu.Lock()
 	defer b.tixMu.Unlock()
-	var zeroJob Job
-	for i, key := range keys {
+	for _, key := range keys {
 		t, ok := b.tickets[key]
 		if ok {
 			delete(b.tickets, key)
 			t.err = err
 			t.wg.Done()
 		}
-		// avoid leaking jobs since the slice is reused
-		jobs[i] = zeroJob
 	}
 }
 
