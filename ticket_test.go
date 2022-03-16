@@ -8,11 +8,20 @@ import (
 	"github.com/echlebek/ticket"
 )
 
-type Job struct {
-	Delay time.Duration
+type JobWithDelay interface {
+	Delay() time.Duration
 }
 
-type JobHandler[J Job] struct {
+type Job struct {
+	delay time.Duration
+}
+
+func (j Job) Delay() time.Duration {
+	return j.delay
+}
+
+
+type JobHandler[J JobWithDelay] struct {
 	Run bool
 }
 
@@ -25,7 +34,7 @@ func (h *JobHandler[J]) Handle(ctx context.Context, jobs []J) error {
 
 	go func() {
 		for _, j := range jobs {
-			time.Sleep(j.Delay)
+			time.Sleep(j.Delay())
 		}
 		done <- struct{}{}
 	}()
@@ -63,7 +72,7 @@ func TestCancel(t *testing.T) {
 	handler := JobHandler[Job]{}
 	server := ticket.NewBatchServer[Job](ctx, 100, time.Millisecond, &handler)
 
-	stub := server.Accept(Job{Delay: 10*time.Second})
+	stub := server.Accept(Job{delay: 10*time.Second})
 
 	time.Sleep(200 * time.Millisecond)
 	cancel()
